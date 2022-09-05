@@ -107,46 +107,28 @@ namespace MoviesConsoleApp
 
             Console.WriteLine();
             Console.WriteLine("7. Qual o elenco do filme melhor avaliado ?");
-            var consulta7 = (from character in _db.Characters
-                             .Include(c => c.Actor)
-                             .Include(c => c.Movie)
-                             select new {
-                                 ValorAvaliacoes = character.Movie.Rating
-                             }).ToList();
-            var melhorAvaliado = consulta7.Select(x => x.ValorAvaliacoes);
-            Console.WriteLine("{0}", melhorAvaliado);
+            var consulta7 = _db.Movies                  
+                            .Include(c => c.Characters)
+                                .ThenInclude(c => c.Actor)
+                            .OrderByDescending(x => x.Rating)
+                            .FirstOrDefault()
+                            .Characters;
 
-            Console.WriteLine();
-            Console.WriteLine("8. Qual o elenco do filme com o maior faturamento?");
-            var consulta8 = from character in _db.Characters
-                            .Include(c => c.Actor)
-                            where character.Character == "James Bond"
-                            select new
-                            {
-                                Nome = character.Actor.Name,
-                                Idade = character.Actor.DateBirth > DateTime.Now ? DateTime.Now.Year - character.Actor.DateBirth.Year : (DateTime.Now.Year - character.Actor.DateBirth.Year) - 1,
-                                Personagem = character.Character,
-                            };
-            foreach (var x in consulta8.Distinct())
-            {
-                Console.WriteLine(String.Format("{0} - {1}", x.Nome, x.Idade));
+            foreach (var res in consulta7) {
+                Console.WriteLine("{0}", res.Actor.Name);
             }
 
             Console.WriteLine();
-            Console.WriteLine("9. Gerar um relatório de aniversariantes, agrupando os atores pelo mês de aniverário.");
-            var consulta9 = from actor in _db.Actors
-                            select new {
-                                Nome = actor.Name,
-                                Aniver = actor.DateBirth
-                            };
-            var agrupamento9 = from it in consulta9
-                           group it by it.Aniver.Month into grp
-                           select new {
-                               Mes = grp.Key
-                           };
+            Console.WriteLine("8. Qual o elenco do filme com o maior faturamento?");
+            var consulta8 = _db.Movies
+                            .Include(c => c.Characters)
+                                .ThenInclude(c => c.Actor)
+                            .OrderByDescending(x => x.Gross)
+                            .FirstOrDefault()
+                            .Characters;
 
-            foreach (var res in consulta9) {
-                Console.WriteLine("{0} - {1}", res.Nome, res.Aniver);
+            foreach (var res in consulta8) {
+                Console.WriteLine("{0}", res.Actor.Name);
             }
            
             Console.WriteLine("- - -   feito!  - - - ");
