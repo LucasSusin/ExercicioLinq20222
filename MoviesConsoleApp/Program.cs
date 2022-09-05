@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿using Microsoft.EntityFrameworkCore;
 using Persistencia.Entidades;
 using Persistencia.Repositorio;
 using System;
@@ -18,33 +18,137 @@ namespace MoviesConsoleApp
 
             Console.WriteLine();
             Console.WriteLine("1. Listar o nome de todos personagens desempenhados por um determinado ator, incluindo a informação de qual o título do filme e o diretor");
-
+            var consulta1 = from character in _db.Characters
+                            .Include(c => c.Actor)
+                            .Include(c => c.Movie)
+                        where character.Actor.Name == "Tom Hanks"
+                        select new {
+                            Personagem = character.Character,
+                            TituloFilme = character.Movie.Title,
+                            Diretor = character.Movie.Director
+                        };
+            foreach (var x in consulta1) {
+                Console.WriteLine(String.Format("{0} - {1} - {2}", x.Personagem, x.TituloFilme, x.Diretor));
+            }
 
             Console.WriteLine();
             Console.WriteLine("2. Mostrar o nome e idade de todos atores que desempenharam um determinado personagem(por exemplo, quais os atores que já atuaram como '007' ?");
-
+            var consulta2 = from character in _db.Characters
+                            .Include(c => c.Actor)
+                            where character.Character == "James Bond"
+                            select new {
+                                Nome = character.Actor.Name,                                
+                                Idade = character.Actor.DateBirth > DateTime.Now ? DateTime.Now.Year - character.Actor.DateBirth.Year : (DateTime.Now.Year - character.Actor.DateBirth.Year) - 1,                           
+                                Personagem = character.Character,
+                            };
+            foreach (var x in consulta2.Distinct()) {
+                Console.WriteLine(String.Format("{0} - {1}", x.Nome, x.Idade));
+            }
 
             Console.WriteLine();
             Console.WriteLine("3. Informar qual o ator desempenhou mais vezes um determinado personagem(por exemplo: qual o ator que realizou mais filmes como o 'agente 007'");
+            var personagem = "James Bond";
+            var consulta3 = from character in _db.Characters
+                            .Include(c => c.Actor)
+                            where character.Character == personagem
+                            select new {
+                                Nome = character.Actor.Name                               
+                            };
+            var agrupamento3 = from it in consulta3
+                           group it by it.Nome into grp
+                           select new {
+                               Nome = grp.Key,
+                               Quant = grp.Count()
+                           };
+            var maisVezes = 0;
+            foreach (var res in agrupamento3) {
+                if (maisVezes < res.Quant) {
+                    personagem = res.Nome;
+                    maisVezes = res.Quant;
+                }
+            }
+            Console.WriteLine("{0}", personagem);
 
             Console.WriteLine();
             Console.WriteLine("4. Mostrar o nome e a data de nascimento do ator mais idoso");
+            var consulta4 = from actor in _db.Actors                      
+                            select new {
+                                Nome = actor.Name,
+                                Idade = actor.DateBirth
+                            };
+
+            var consultaOrdenada4 = consulta4.OrderBy(x => x.Idade).FirstOrDefault();
+            Console.WriteLine("{0} - {1}", consultaOrdenada4.Nome, consultaOrdenada4.Idade);
 
             Console.WriteLine();
             Console.WriteLine("5. Mostrar o nome e a data de nascimento do ator mais novo a atuar em um determinado gênero");
+            var consulta5 = from character in _db.Characters
+                            .Include(c => c.Movie)
+                                .ThenInclude(c => c.Genre)
+                                .Include("Actor")
+                            where character.Movie.Genre.Name.Equals("Action")
+                            select new {
+                                Nome = character.Actor.Name,
+                                Idade = character.Actor.DateBirth
+                            };
+            var consultaOrdenada5 = consulta5.OrderBy(x => x.Idade).FirstOrDefault();
+            Console.WriteLine("{0} - {1}", consultaOrdenada5.Nome, consultaOrdenada5.Idade);
 
             Console.WriteLine();
             Console.WriteLine("6. Mostrar o valor médio das avaliações dos filmes de um determinado diretor");
+            var consulta6 = (from movie in _db.Movies
+                             where movie.Director == "Steven Spielberg"
+                             select new {
+                                 ValorAvaliacoes = movie.Rating
+                             }).ToList();
+            var soma = consulta6.Select(x => x.ValorAvaliacoes).Sum();
+            var quantidade = consulta6.Select(x => x.ValorAvaliacoes).Count();
+            Console.WriteLine("{0}", soma/quantidade);
 
             Console.WriteLine();
             Console.WriteLine("7. Qual o elenco do filme melhor avaliado ?");
+            var consulta7 = (from character in _db.Characters
+                             .Include(c => c.Actor)
+                             .Include(c => c.Movie)
+                             select new {
+                                 ValorAvaliacoes = character.Movie.Rating
+                             }).ToList();
+            var melhorAvaliado = consulta7.Select(x => x.ValorAvaliacoes);
+            Console.WriteLine("{0}", melhorAvaliado);
 
             Console.WriteLine();
             Console.WriteLine("8. Qual o elenco do filme com o maior faturamento?");
+            var consulta8 = from character in _db.Characters
+                            .Include(c => c.Actor)
+                            where character.Character == "James Bond"
+                            select new
+                            {
+                                Nome = character.Actor.Name,
+                                Idade = character.Actor.DateBirth > DateTime.Now ? DateTime.Now.Year - character.Actor.DateBirth.Year : (DateTime.Now.Year - character.Actor.DateBirth.Year) - 1,
+                                Personagem = character.Character,
+                            };
+            foreach (var x in consulta8.Distinct())
+            {
+                Console.WriteLine(String.Format("{0} - {1}", x.Nome, x.Idade));
+            }
 
             Console.WriteLine();
             Console.WriteLine("9. Gerar um relatório de aniversariantes, agrupando os atores pelo mês de aniverário.");
+            var consulta9 = from actor in _db.Actors
+                            select new {
+                                Nome = actor.Name,
+                                Aniver = actor.DateBirth
+                            };
+            var agrupamento9 = from it in consulta9
+                           group it by it.Aniver.Month into grp
+                           select new {
+                               Mes = grp.Key
+                           };
 
+            foreach (var res in consulta9) {
+                Console.WriteLine("{0} - {1}", res.Nome, res.Aniver);
+            }
+           
             Console.WriteLine("- - -   feito!  - - - ");
             Console.WriteLine();
         }
